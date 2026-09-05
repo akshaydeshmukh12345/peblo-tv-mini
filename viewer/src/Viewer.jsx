@@ -9,6 +9,7 @@ function Viewer() {
   const [selectedShow, setSelectedShow] = useState(null);
   const [activePage, setActivePage] = useState("Home");
   const [myList, setMyList] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchShows();
@@ -37,6 +38,7 @@ function Viewer() {
   const handleNavigation = (page) => {
     setActivePage(page);
     setSelectedShow(null);
+    setSearchTerm("");
 
     if (page === "Home") {
       window.scrollTo({
@@ -61,7 +63,9 @@ function Viewer() {
 
     if (alreadyAdded) {
       setMyList(
-        myList.filter((item) => item.id !== show.id)
+        myList.filter(
+          (item) => item.id !== show.id
+        )
       );
     } else {
       setMyList([...myList, show]);
@@ -80,136 +84,302 @@ function Viewer() {
     }
   };
 
+  /* FEATURED SHOW */
+
+  const featuredShow =
+    shows.find((show) => show.is_featured) ||
+    shows[0] ||
+    null;
+
+  /* FILTER + SEARCH */
+
   const filteredShows = shows.filter((show) => {
-    const genre = show.genre?.toLowerCase() || "";
+    const genre =
+      show.genre?.toLowerCase() || "";
+
+    const title =
+      show.title?.toLowerCase() || "";
+
+    const description =
+      show.description?.toLowerCase() || "";
+
+    const search =
+      searchTerm.toLowerCase();
+
+    /* SEARCH FILTER */
+
+    const matchesSearch =
+      title.includes(search) ||
+      genre.includes(search) ||
+      description.includes(search);
+
+    /* MOVIES */
 
     if (activePage === "Movies") {
       return (
-        genre.includes("movie") ||
-        genre.includes("film")
+        (
+          genre.includes("movie") ||
+          genre.includes("film")
+        ) &&
+        matchesSearch
       );
     }
+
+    /* TV SHOWS */
 
     if (activePage === "TV Shows") {
       return (
         !genre.includes("movie") &&
-        !genre.includes("film")
+        !genre.includes("film") &&
+        matchesSearch
       );
     }
+
+    /* MY LIST */
 
     if (activePage === "My List") {
-      return myList.some(
-        (item) => item.id === show.id
+      return (
+        myList.some(
+          (item) => item.id === show.id
+        ) &&
+        matchesSearch
       );
     }
 
-    return true;
+    return matchesSearch;
   });
 
   return (
     <div className="app">
 
       {/* NAVBAR */}
+
       <nav className="navbar">
+
         <h1
           className="logo"
-          onClick={() => handleNavigation("Home")}
+          onClick={() =>
+            handleNavigation("Home")
+          }
         >
           PEBLO
         </h1>
 
         <div className="nav-links">
-          {["Home", "Movies", "TV Shows", "My List"].map(
-            (page) => (
-              <button
-                key={page}
-                className={
-                  activePage === page
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  handleNavigation(page)
-                }
-              >
-                {page}
-              </button>
-            )
-          )}
+
+          {[
+            "Home",
+            "Movies",
+            "TV Shows",
+            "My List",
+          ].map((page) => (
+
+            <button
+              key={page}
+              className={
+                activePage === page
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                handleNavigation(page)
+              }
+            >
+              {page}
+            </button>
+
+          ))}
+
         </div>
+
+        {/* SEARCH */}
+
+        <div className="search-container">
+
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search shows..."
+            value={searchTerm}
+            onChange={(event) =>
+              setSearchTerm(event.target.value)
+            }
+          />
+
+        </div>
+
       </nav>
 
-      {/* HERO SECTION */}
+      {/* HERO */}
+
       <main className="hero">
+
         <div className="hero-content">
+
           <p className="tag">
-            PEBLO ENTERTAINMENT
+
+            {featuredShow
+              ? "★ FEATURED ON PEBLO"
+              : "PEBLO ENTERTAINMENT"}
+
           </p>
 
           <h2>
-            Discover Your Next
-            <br />
-            Favorite Show
+
+            {featuredShow ? (
+              featuredShow.title
+            ) : (
+              <>
+                Discover Your Next
+                <br />
+                Favorite Show
+              </>
+            )}
+
           </h2>
 
           <p className="hero-description">
-            Explore movies, TV shows and entertainment
-            from the Peblo content library.
+
+            {featuredShow
+              ? featuredShow.description ||
+                "Explore this featured content on Peblo."
+              : "Explore movies, TV shows and entertainment from the Peblo content library."}
+
           </p>
 
           <button
             className="watch-button"
-            onClick={handleWatchNow}
+            onClick={() => {
+
+              if (featuredShow) {
+                setSelectedShow(featuredShow);
+              } else {
+                handleWatchNow();
+              }
+
+            }}
           >
-            ▶ Explore Shows
+
+            ▶ {featuredShow
+              ? "Watch Now"
+              : "Explore Shows"}
+
           </button>
+
         </div>
+
+        {featuredShow?.poster_url && (
+
+          <div className="hero-poster">
+
+            <img
+              src={featuredShow.poster_url}
+              alt={featuredShow.title}
+            />
+
+          </div>
+
+        )}
+
       </main>
 
       {/* SHOWS SECTION */}
+
       <section
         className="shows"
         id="shows-section"
       >
+
         <div className="section-header">
+
           <h2>
-            {activePage === "Home"
+
+            {searchTerm
+              ? `Search Results for "${searchTerm}"`
+              : activePage === "Home"
               ? "Popular Shows"
               : activePage}
+
           </h2>
 
-          {activePage === "My List" && (
-            <span className="list-count">
-              {myList.length} saved
-            </span>
-          )}
+          <div className="section-actions">
+
+            {activePage === "My List" && (
+
+              <span className="list-count">
+
+                {myList.length} saved
+
+              </span>
+
+            )}
+
+            <button
+              className="refresh-button"
+              onClick={fetchShows}
+            >
+              ↻ Refresh
+            </button>
+
+          </div>
+
         </div>
 
         {loading ? (
+
           <p className="status-message">
             Loading shows...
           </p>
+
         ) : filteredShows.length === 0 ? (
+
           <div className="empty-state">
+
             <div className="empty-icon">
               🎬
             </div>
 
             <h3>
-              {activePage === "My List"
+
+              {searchTerm
+                ? "No matching shows found"
+                : activePage === "My List"
                 ? "Your list is empty"
                 : "No shows available"}
+
             </h3>
 
             <p>
-              {activePage === "My List"
+
+              {searchTerm
+                ? `We couldn't find anything matching "${searchTerm}".`
+                : activePage === "My List"
                 ? "Add shows to your list and access them here."
                 : "No content available right now."}
+
             </p>
+
+            {searchTerm && (
+
+              <button
+                className="retry-button"
+                onClick={() =>
+                  setSearchTerm("")
+                }
+              >
+                Clear Search
+              </button>
+
+            )}
+
           </div>
+
         ) : (
+
           <div className="show-grid">
+
             {filteredShows.map((show) => (
+
               <div
                 className="show-card"
                 key={show.id}
@@ -217,74 +387,102 @@ function Viewer() {
                   setSelectedShow(show)
                 }
               >
+
                 <div className="poster-container">
 
                   {show.poster_url ? (
+
                     <img
                       src={show.poster_url}
                       alt={show.title}
                       className="poster"
                     />
+
                   ) : (
+
                     <div className="poster-placeholder">
                       🎬
                     </div>
+
                   )}
 
                   {show.is_featured && (
+
                     <span className="featured-badge">
                       ★ Featured
                     </span>
+
                   )}
 
                   <button
                     className="list-button"
                     onClick={(event) => {
+
                       event.stopPropagation();
+
                       toggleMyList(show);
+
                     }}
                   >
+
                     {isInMyList(show.id)
                       ? "✓"
                       : "+"}
+
                   </button>
+
                 </div>
 
                 <div className="show-info">
+
                   <h3>
                     {show.title}
                   </h3>
 
                   <p className="genre">
+
                     {show.genre ||
                       "Entertainment"}
+
                   </p>
 
                   <p className="description">
+
                     {show.description ||
                       "No description available."}
+
                   </p>
+
                 </div>
+
               </div>
+
             ))}
+
           </div>
+
         )}
+
       </section>
 
-      {/* SHOW DETAILS */}
+      {/* SHOW DETAILS MODAL */}
+
       {selectedShow && (
+
         <div
           className="modal-overlay"
           onClick={() =>
             setSelectedShow(null)
           }
         >
+
           <div
             className="modal"
             onClick={(event) =>
               event.stopPropagation()
             }
           >
+
             <button
               className="close-button"
               onClick={() =>
@@ -295,24 +493,32 @@ function Viewer() {
             </button>
 
             <div className="modal-image">
+
               {selectedShow.poster_url ? (
+
                 <img
                   src={selectedShow.poster_url}
                   alt={selectedShow.title}
                   className="modal-poster"
                 />
+
               ) : (
+
                 <div className="modal-placeholder">
                   🎬
                 </div>
+
               )}
+
             </div>
 
             <div className="modal-content">
 
               <p className="modal-genre">
+
                 {selectedShow.genre ||
                   "Entertainment"}
+
               </p>
 
               <h2>
@@ -320,19 +526,24 @@ function Viewer() {
               </h2>
 
               <p className="modal-description">
+
                 {selectedShow.description ||
                   "No description available for this show."}
+
               </p>
 
               {selectedShow.is_featured && (
+
                 <div className="featured-status">
                   ★ Featured Content
                 </div>
+
               )}
 
               <div className="modal-actions">
 
                 {selectedShow.video_url && (
+
                   <a
                     href={selectedShow.video_url}
                     target="_blank"
@@ -341,6 +552,7 @@ function Viewer() {
                   >
                     ▶ Play
                   </a>
+
                 )}
 
                 <button
@@ -349,15 +561,21 @@ function Viewer() {
                     toggleMyList(selectedShow)
                   }
                 >
+
                   {isInMyList(selectedShow.id)
                     ? "✓ Remove from My List"
                     : "+ Add to My List"}
+
                 </button>
 
               </div>
+
             </div>
+
           </div>
+
         </div>
+
       )}
 
     </div>
